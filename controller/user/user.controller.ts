@@ -17,7 +17,6 @@ export class UserController {
       if (!(firstName && lastName && email && password)) {
         throw new Error("Please fill all the required fields");
       }
-      console.log(email);
       let existingEmail = await User.findOne({
         where: {
           email: email,
@@ -117,9 +116,6 @@ export class UserController {
        });  
        sendMail(email, resetPasswordToken);
 
-       let currentDate = moment().format('DD/MM/YYYY H:mm:ss')
-       console.log(currentDate)
-
        res.send({
            "message": "Email has been send",
        })
@@ -144,7 +140,6 @@ export class UserController {
 
       let hasedPassword = await bcrypt.hash(password, 12);
 
-      console.log(hasedPassword)
 
       if(token === user.resetPasswordToken && currentDate <= expiryDate){
         let updatePassword = await User.update({
@@ -154,7 +149,6 @@ export class UserController {
             email: email
           }
         })
-        console.log(updatePassword)
         res.status(500).json({ 
           message: "Your password has been changed please login to continue"});
       }
