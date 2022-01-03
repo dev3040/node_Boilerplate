@@ -5,7 +5,7 @@ import statusCode from '../config/statusCode';
 
 function verifyToken(request:any, response:any, next:any) {
     let secret:any = process.env.SECRET;
-    let token = request.headers["x-access-token"] || request.headers["authorization"];
+    let token = request.headers["x-access-token"] || request.headers["Authorization"];
 
 	if (token) {
 		token = token.startsWith("Bearer ") ? token.slice(7, token.length) : token;

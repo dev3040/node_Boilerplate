@@ -8,6 +8,8 @@ interface UserAttributes {
   lastName: string;
   email: string;
   password: string;
+  resetPasswordToken: string;
+  resetPasswordExpire: Date;
 }
 
 module.exports = (sequelize:any, DataTypes:any) => {
@@ -38,7 +40,13 @@ module.exports = (sequelize:any, DataTypes:any) => {
     password: {
       type: DataTypes.STRING,
       allowNull: false
-    }
+    },
+    resetPasswordToken: {
+      type: DataTypes.STRING,
+    },
+    resetPasswordExpire:{
+      type: DataTypes.DATE
+    },
   }, {
     sequelize,
     modelName: 'User',

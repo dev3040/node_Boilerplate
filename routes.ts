@@ -5,5 +5,7 @@ import verifyToken from './middleware/auth'
 
 router.post('/register',UserController.register)
 router.post('/login',UserController.login)
+router.post('/forgotPassword', UserController.forgotPassword)
+router.post('/resetPassword', UserController.resetPassword)
 router.get('/getUser',verifyToken, UserController.getUser)
 export default router;

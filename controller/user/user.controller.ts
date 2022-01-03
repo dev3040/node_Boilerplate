@@ -1,84 +1,174 @@
-import db from '../../models'; 
-import bcrypt from 'bcrypt';
-import jsonwebtoken from 'jsonwebtoken';
-import * as dotenv from 'dotenv';
-dotenv.config({ path: __dirname+'/.env' });
+import db from "../../models";
+import bcrypt from "bcrypt";
+import jsonwebtoken from "jsonwebtoken";
+import * as dotenv from "dotenv";
+import sendMail from "../../helper/sendMail";
+import crypto from 'crypto';
+import moment from 'moment';
 
+dotenv.config({ path: __dirname + "/.env" });
 
-const User=db["User"]
+const User = db["User"];
 export class UserController {
-    static async register(req:any,res:any,next:any) {
-        try{            
-            //Validation for all the required fields
-            let {email,firstName,password,lastName} = req.body;
-            if(!(firstName && lastName && email && password)){
-                throw new Error('Please fill all the required fields');
-            }
-            console.log(email)
-            let existingEmail = await User.findOne({
-                where: {
-                    email: email
-                }
-            });
+  static async register(req: any, res: any, next: any) {
+    try {
+      //Validation for all the required fields
+      let { email, firstName, password, lastName } = req.body;
+      if (!(firstName && lastName && email && password)) {
+        throw new Error("Please fill all the required fields");
+      }
+      console.log(email);
+      let existingEmail = await User.findOne({
+        where: {
+          email: email,
+        },
+      });
 
-            if(existingEmail) {
-                throw new Error('User already exists');
-            }
+      if (existingEmail) {
+        throw new Error("User already exists");
+      }
 
-            let hasedPassword = await bcrypt.hash(password, 10);
+      let hasedPassword = await bcrypt.hash(password, 10);
 
-            let result = await User.create({
-                firstName: firstName,
-                lastName: lastName,
-                email: email,
-                password: hasedPassword
-            });
-            
-            res.send(result);
+      let result = await User.create({
+        firstName: firstName,
+        lastName: lastName,
+        email: email,
+        password: hasedPassword,
+      });
+
+      res.send(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  static async login(req: any, res: any, next: any) {
+    try {
+      let { email, password } = req.body;
+
+      if (!(email && password)) {
+        throw new Error("Please enter email and password");
+      }
+
+      let userExists: any = await User.findOne({
+        where: {
+          email: email,
+        },
+      });
+      if (!userExists) {
+        throw new Error("User does not exists");
+      }
+
+      let checkPassword = await bcrypt.compare(password, userExists.password);
+
+      let secret: any = process.env.SECRET;
+
+      if (!checkPassword) {
+        throw new Error("Incorrect credentials");
+      } else {
+        let token = jsonwebtoken.sign({ id: userExists.id }, secret, {
+          expiresIn: "1h",
+        });
+        res.send({
+          token: token,
+          email: userExists.email,
+        });
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  static async getUser(req: any, res: any, next: any) {
+    res.send(req.user);
+  }
+
+  static async forgotPassword(req: any, res: any, next: any) {
+    try {
+      let { email } = req.body;
+
+      let user = await User.findOne({
+        where: {
+          email: email,
+        },
+      });
+
+      if (!user)
+        return res
+          .status(401)
+          .json({
+            message:
+              "The email address " +
+              req.body.email +
+              " is not associated with any account. Double-check your email address and try again.",
+          });
+      
+      let resetPasswordToken = crypto.randomBytes(20).toString('hex');
+      let resetPasswordExpire = Date.now() + 360000;
+
+       let result = await User.update({
+           resetPasswordToken: resetPasswordToken,
+           resetPasswordExpire: resetPasswordExpire
+       }, {
+           where: {
+               email: email
+           }
+       });  
+       sendMail(email, resetPasswordToken);
+
+       let currentDate = moment().format('DD/MM/YYYY H:mm:ss')
+       console.log(currentDate)
+
+       res.send({
+           "message": "Email has been send",
+       })
+    } catch (error:any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  static async resetPassword(req: any, res: any, next: any){
+    try{
+      let { token, password, email } = req.body;
+
+      let user = await User.findOne({
+        where: {
+          email: email
         }
-        catch(error:any) {
-            res.status(500).json({error:error.message})
-        }
+      })
+      
+      let currentDate = moment().format('DD/MM/YYYY H:mm:ss')
+
+      let expiryDate = moment(user.resetPasswordExpire).format('DD/MM/YYYY H:mm:ss')
+
+      let hasedPassword = await bcrypt.hash(password, 12);
+
+      console.log(hasedPassword)
+
+      if(token === user.resetPasswordToken && currentDate <= expiryDate){
+        let updatePassword = await User.update({
+          password:hasedPassword
+        }, {
+          where: {
+            email: email
+          }
+        })
+        console.log(updatePassword)
+        res.status(500).json({ 
+          message: "Your password has been changed please login to continue"});
+      }
+      else if (expiryDate < currentDate) {
+        throw new Error('The token you enter is expired')
+      }
+      else {
+        throw new Error('Wrong token, Please check the token again')
+      }
+    } catch(error:any) {
+      res.status(500).json({ error: error.message });
     }
+  }
 
-    static async login(req: any, res:any, next:any){
-        try{
-            let {email, password } = req.body;
-            
-            if(!(email && password)){
-                throw new Error('Please enter email and password');
-            }
-
-            let userExists:any = await User.findOne({
-                where: {
-                    email: email
-                }
-            })
-            if(!userExists){
-                throw new Error('User does not exists')
-            }
-
-            let checkPassword = await bcrypt.compare(password, userExists.password);
-
-            let secret:any = process.env.SECRET;
-
-
-            if(!checkPassword) {
-                throw new Error('Incorrect credentials')
-            }
-            else {
-                let token = jsonwebtoken.sign({id:userExists.id}, secret ,{ expiresIn: '1h' })
-                res.send({
-                    token: token,
-                    email: userExists.email
-                })
-            }
-        }catch(error:any){
-            res.status(500).json({error:error.message})
-        };
-    }
-    
-    static async getUser(req: any, res:any, next:any) {
-        res.send(req.user);
-    }
 }
+
+
