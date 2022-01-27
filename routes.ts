@@ -8,4 +8,5 @@ router.post('/login',UserController.login)
 router.post('/forgotPassword', UserController.forgotPassword)
 router.post('/resetPassword', UserController.resetPassword)
 router.get('/getUser',verifyToken, UserController.getUser)
+router.put('/updateUser',verifyToken,UserController.updateUser)
 export default router;

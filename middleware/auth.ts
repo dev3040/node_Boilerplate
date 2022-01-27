@@ -5,7 +5,7 @@ import statusCode from '../config/statusCode';
 
 function verifyToken(request:any, response:any, next:any) {
     let secret:any = process.env.SECRET;
-    let token = request.headers["x-access-token"] || request.headers["Authorization"];
+    let token = request.headers["x-access-token"] || request.headers["authorization"];
 
 	if (token) {
 		token = token.startsWith("Bearer ") ? token.slice(7, token.length) : token;
@@ -24,7 +24,7 @@ function verifyToken(request:any, response:any, next:any) {
 			}
 		});
 		if (!users) return response.status(statusCode.UNAUTHORIZED).send();
-
+		delete users.dataValues.password
 		request.user = users;
 		next();
 	});

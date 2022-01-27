@@ -7,6 +7,7 @@ interface UserAttributes {
   firstName: string;
   lastName: string;
   email: string;
+  phoneNumber:string;
   password: string;
   resetPasswordToken: string;
   resetPasswordExpire: Date;
@@ -36,6 +37,10 @@ module.exports = (sequelize:any, DataTypes:any) => {
       type:DataTypes.STRING,
       allowNull: false,
       unique: true
+    },
+    phoneNumber:{
+      type:DataTypes.STRING,
+      allowNull: false,
     },
     password: {
       type: DataTypes.STRING,
